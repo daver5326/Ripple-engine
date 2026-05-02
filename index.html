@@ -1,1 +1,721 @@
+<!DOCTYPE html>
 
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple — Event Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+:root {
+–bg: #080c14;
+–surface: #0d1520;
+–border: #1e2d42;
+–accent: #00c8ff;
+–accent2: #ff6b35;
+–warn: #f5c842;
+–text: #e2eaf5;
+–muted: #5a7090;
+–green: #00e896;
+–red: #ff4566;
+}
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: ‘Syne’, sans-serif;
+min-height: 100vh;
+padding: 24px 16px;
+}
+
+header {
+text-align: center;
+margin-bottom: 32px;
+}
+
+.logo {
+font-size: 42px;
+font-weight: 800;
+letter-spacing: -1px;
+background: linear-gradient(135deg, var(–accent), var(–accent2));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.tagline {
+color: var(–muted);
+font-family: ‘Space Mono’, monospace;
+font-size: 11px;
+letter-spacing: 3px;
+text-transform: uppercase;
+margin-top: 4px;
+}
+
+.card {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 20px;
+margin-bottom: 20px;
+}
+
+.card-title {
+font-size: 11px;
+font-family: ‘Space Mono’, monospace;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: var(–accent);
+margin-bottom: 14px;
+}
+
+.input-row {
+display: flex;
+gap: 10px;
+flex-wrap: wrap;
+margin-bottom: 12px;
+}
+
+input, textarea, select {
+background: var(–bg);
+border: 1px solid var(–border);
+border-radius: 8px;
+color: var(–text);
+font-family: ‘Space Mono’, monospace;
+font-size: 13px;
+padding: 10px 14px;
+outline: none;
+transition: border-color 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+border-color: var(–accent);
+}
+
+input.flex1 { flex: 1; min-width: 140px; }
+
+textarea {
+width: 100%;
+height: 120px;
+resize: vertical;
+}
+
+button {
+background: linear-gradient(135deg, var(–accent), #0099cc);
+border: none;
+border-radius: 8px;
+color: #000;
+cursor: pointer;
+font-family: ‘Syne’, sans-serif;
+font-size: 14px;
+font-weight: 700;
+padding: 11px 24px;
+transition: opacity 0.2s, transform 0.1s;
+letter-spacing: 0.5px;
+}
+
+button:hover { opacity: 0.9; transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+button.secondary {
+background: var(–border);
+color: var(–text);
+}
+
+.tabs {
+display: flex;
+gap: 8px;
+margin-bottom: 20px;
+}
+
+.tab {
+background: transparent;
+border: 1px solid var(–border);
+border-radius: 8px;
+color: var(–muted);
+cursor: pointer;
+font-family: ‘Space Mono’, monospace;
+font-size: 11px;
+letter-spacing: 1px;
+padding: 8px 16px;
+text-transform: uppercase;
+transition: all 0.2s;
+}
+
+.tab.active {
+background: var(–accent);
+border-color: var(–accent);
+color: #000;
+font-weight: 700;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.status-bar {
+background: var(–bg);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 12px 16px;
+font-family: ‘Space Mono’, monospace;
+font-size: 12px;
+color: var(–muted);
+margin-bottom: 16px;
+min-height: 44px;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: var(–muted);
+flex-shrink: 0;
+}
+
+.dot.active {
+background: var(–accent);
+animation: pulse 1s infinite;
+}
+
+.dot.done { background: var(–green); }
+.dot.error { background: var(–red); }
+
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+
+.events-grid {
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.event-card {
+background: var(–bg);
+border: 1px solid var(–border);
+border-radius: 10px;
+padding: 16px;
+position: relative;
+transition: border-color 0.2s;
+}
+
+.event-card:hover { border-color: var(–accent); }
+
+.event-header {
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+gap: 8px;
+margin-bottom: 10px;
+}
+
+.event-name {
+font-weight: 700;
+font-size: 16px;
+line-height: 1.2;
+}
+
+.event-type-badge {
+background: var(–accent);
+color: #000;
+font-family: ‘Space Mono’, monospace;
+font-size: 9px;
+font-weight: 700;
+letter-spacing: 1px;
+padding: 3px 8px;
+border-radius: 4px;
+text-transform: uppercase;
+white-space: nowrap;
+flex-shrink: 0;
+}
+
+.event-fields {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 8px;
+}
+
+.field {
+display: flex;
+flex-direction: column;
+gap: 2px;
+}
+
+.field-label {
+font-family: ‘Space Mono’, monospace;
+font-size: 9px;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(–muted);
+}
+
+.field-value {
+font-size: 13px;
+font-weight: 600;
+}
+
+.field-value.uncertain {
+color: var(–warn);
+font-style: italic;
+}
+
+.field-value.missing {
+color: var(–muted);
+font-style: italic;
+}
+
+.uncertain-badge {
+display: inline-block;
+background: rgba(245, 200, 66, 0.15);
+border: 1px solid var(–warn);
+color: var(–warn);
+font-family: ‘Space Mono’, monospace;
+font-size: 9px;
+padding: 1px 5px;
+border-radius: 3px;
+margin-left: 4px;
+vertical-align: middle;
+}
+
+.completeness-bar {
+height: 3px;
+background: var(–border);
+border-radius: 2px;
+margin-top: 12px;
+overflow: hidden;
+}
+
+.completeness-fill {
+height: 100%;
+border-radius: 2px;
+transition: width 0.5s ease;
+}
+
+.event-url {
+margin-top: 10px;
+font-family: ‘Space Mono’, monospace;
+font-size: 11px;
+}
+
+.event-url a {
+color: var(–accent);
+text-decoration: none;
+}
+
+.event-url a:hover { text-decoration: underline; }
+
+.summary-row {
+display: flex;
+gap: 16px;
+flex-wrap: wrap;
+margin-bottom: 16px;
+}
+
+.summary-chip {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 8px 14px;
+font-family: ‘Space Mono’, monospace;
+font-size: 12px;
+}
+
+.summary-chip span {
+color: var(–accent);
+font-size: 18px;
+font-weight: 700;
+display: block;
+}
+
+.export-row {
+display: flex;
+gap: 10px;
+flex-wrap: wrap;
+margin-top: 16px;
+}
+
+.api-key-note {
+font-family: ‘Space Mono’, monospace;
+font-size: 11px;
+color: var(–warn);
+background: rgba(245, 200, 66, 0.08);
+border: 1px solid rgba(245, 200, 66, 0.3);
+border-radius: 8px;
+padding: 10px 14px;
+margin-bottom: 14px;
+}
+
+.empty-state {
+text-align: center;
+padding: 40px 20px;
+color: var(–muted);
+font-family: ‘Space Mono’, monospace;
+font-size: 12px;
+}
+
+.empty-state .icon {
+font-size: 36px;
+margin-bottom: 12px;
+display: block;
+}
+
+select {
+width: 100%;
+margin-bottom: 12px;
+}
+
+.two-col {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+}
+
+@media (max-width: 480px) {
+.two-col { grid-template-columns: 1fr; }
+.event-fields { grid-template-columns: 1fr; }
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo">RIPPLE</div>
+  <div class="tagline">Event Intelligence Engine · v0.1</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('scrape')">🔍 Scrape</button>
+  <button class="tab" onclick="switchTab('refine')">⚙️ Refine</button>
+  <button class="tab" onclick="switchTab('results')">📋 Results</button>
+</div>
+
+<!-- SCRAPE TAB -->
+
+<div id="tab-scrape" class="tab-panel active">
+  <div class="card">
+    <div class="card-title">01 — Location Query</div>
+    <div class="api-key-note">⚠️ Paste your Anthropic API key below to power the engine.</div>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." style="width:100%;margin-bottom:12px;" />
+    <div class="input-row">
+      <input class="flex1" type="text" id="location" placeholder="City, address, or zip (e.g. Little Rock AR)" />
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">Radius</div>
+        <select id="radius">
+          <option value="500">500 yards — Walkable</option>
+          <option value="1000">1,000 yards — Neighborhood</option>
+          <option value="2500" selected>2,500 yards — City core</option>
+          <option value="5000">5,000 yards — Metro wide</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">Timeframe</div>
+        <select id="timeframe">
+          <option value="tonight">Tonight</option>
+          <option value="this_weekend">This Weekend</option>
+          <option value="this_week">This Week</option>
+          <option value="this_month" selected>This Month</option>
+        </select>
+      </div>
+    </div>
+    <button id="scrapeBtn" onclick="runScrape()" style="width:100%;">FIND EVENTS</button>
+  </div>
+
+  <div class="status-bar" id="scrapeStatus">
+    <div class="dot" id="scrapeDot"></div>
+    <span id="scrapeStatusText">Ready — enter a location and hit Find Events</span>
+  </div>
+</div>
+
+<!-- REFINE TAB -->
+
+<div id="tab-refine" class="tab-panel">
+  <div class="card">
+    <div class="card-title">02 — Paste Raw Event Text</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Paste messy event listings from venue websites, Facebook posts, or local publications. One or many — the engine handles it all.</p>
+    <textarea id="rawText" placeholder="e.g. Patty & the Cakes LIVE at Stickyz! Friday May 9, doors 7pm show 8pm. $10 at door. 21+. stickyz.com/events"></textarea>
+    <div style="margin-top:12px;">
+      <button onclick="runRefine()" style="width:100%;">CLEAN & STANDARDIZE</button>
+    </div>
+  </div>
+  <div class="status-bar" id="refineStatus">
+    <div class="dot" id="refineDot"></div>
+    <span id="refineStatusText">Ready — paste raw event text above</span>
+  </div>
+</div>
+
+<!-- RESULTS TAB -->
+
+<div id="tab-results" class="tab-panel">
+  <div id="summaryRow" class="summary-row" style="display:none!important"></div>
+
+  <div id="eventsContainer" class="events-grid">
+    <div class="empty-state">
+      <span class="icon">🌊</span>
+      No events yet. Use Scrape or Refine to find events.
+    </div>
+  </div>
+
+  <div class="export-row" id="exportRow" style="display:none">
+    <button onclick="exportJSON()" class="secondary">Export JSON</button>
+    <button onclick="exportCSV()" class="secondary">Export CSV</button>
+    <button onclick="clearResults()" class="secondary">Clear All</button>
+  </div>
+</div>
+
+<script>
+let allEvents = [];
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStatus(prefix, state, text) {
+  const dot = document.getElementById(prefix + 'Dot');
+  const label = document.getElementById(prefix + 'StatusText');
+  dot.className = 'dot' + (state === 'active' ? ' active' : state === 'done' ? ' done' : state === 'error' ? ' error' : '');
+  label.textContent = text;
+}
+
+async function callClaude(prompt, apiKey) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+async function runScrape() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const location = document.getElementById('location').value.trim();
+  const radius = document.getElementById('radius').value;
+  const timeframe = document.getElementById('timeframe').value;
+
+  if (!apiKey) return alert('Please enter your Anthropic API key.');
+  if (!location) return alert('Please enter a location.');
+
+  document.getElementById('scrapeBtn').disabled = true;
+  setStatus('scrape', 'active', `Searching for events near ${location}...`);
+
+  const prompt = `You are Ripple's event discovery AI. Your job is to simulate finding real events near a location.
+
+Location: ${location}
+Radius: ${radius} yards
+Timeframe: ${timeframe.replace('_', ' ')}
+
+Generate a realistic set of 8-12 diverse local events that would plausibly exist in this area during this timeframe. Include a mix of:
+- Live music (bars, small venues, open mics)
+- Community events
+- Comedy, arts, festivals
+- Food & drink specials
+- Sports viewing events
+
+For each event, output a JSON array. Each event object must have these exact fields:
+{
+  "event_name": string,
+  "artist_or_performer": string or null,
+  "venue_name": string,
+  "venue_address": string,
+  "date": "MM/DD/YY",
+  "start_time": string or null,
+  "end_time": string or null,
+  "ticket_price": string,
+  "event_url": string or null,
+  "type": one of ["Music","Festival","Comedy","Arts","Family","Community","Food & Drink","Sports","Other"],
+  "uncertain_fields": array of field names you're not confident about
+}
+
+Output ONLY the raw JSON array. No markdown, no explanation, no backticks.`;
+
+  try {
+    const raw = await callClaude(prompt, apiKey);
+    const events = JSON.parse(raw.trim());
+    addEvents(events);
+    setStatus('scrape', 'done', `Found ${events.length} events near ${location}`);
+    switchTabByName('results');
+  } catch (e) {
+    setStatus('scrape', 'error', 'Error: ' + e.message);
+  }
+
+  document.getElementById('scrapeBtn').disabled = false;
+}
+
+async function runRefine() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const raw = document.getElementById('rawText').value.trim();
+
+  if (!apiKey) {
+    // Try to get it from the scrape tab
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) return alert('Please enter your Anthropic API key in the Scrape tab.');
+  }
+  if (!raw) return alert('Please paste some raw event text.');
+
+  setStatus('refine', 'active', 'Cleaning and standardizing event data...');
+
+  const prompt = `You are Ripple's event data standardization engine.
+
+Take this raw, messy event text and extract all events you can find. Clean and standardize each one.
+
+Raw text:
+${raw}
+
+Output a JSON array of event objects. Each must have:
+{
+  "event_name": string,
+  "artist_or_performer": string or null,
+  "venue_name": string or null,
+  "venue_address": string or null,
+  "date": "MM/DD/YY" or null,
+  "start_time": string or null (show time, NOT doors),
+  "end_time": string or null,
+  "ticket_price": "Free" or "$X" or "Unknown",
+  "event_url": string or null,
+  "type": one of ["Music","Festival","Comedy","Arts","Family","Community","Food & Drink","Sports","Other"],
+  "uncertain_fields": array of field names where you had to guess or infer (these will be highlighted yellow for review)
+}
+
+If you're unsure about a field value, still include your best guess but add that field name to "uncertain_fields".
+
+Output ONLY the raw JSON array. No markdown, no explanation, no backticks.`;
+
+  try {
+    const result = await callClaude(prompt, apiKey);
+    const events = JSON.parse(result.trim());
+    addEvents(events);
+    setStatus('refine', 'done', `Refined ${events.length} event(s) — see Results tab`);
+    switchTabByName('results');
+    document.getElementById('rawText').value = '';
+  } catch (e) {
+    setStatus('refine', 'error', 'Error: ' + e.message);
+  }
+}
+
+function addEvents(events) {
+  allEvents = [...allEvents, ...events];
+  renderResults();
+}
+
+function renderResults() {
+  const container = document.getElementById('eventsContainer');
+  const exportRow = document.getElementById('exportRow');
+
+  if (allEvents.length === 0) {
+    container.innerHTML = `<div class="empty-state"><span class="icon">🌊</span>No events yet. Use Scrape or Refine to find events.</div>`;
+    exportRow.style.display = 'none';
+    return;
+  }
+
+  exportRow.style.display = 'flex';
+
+  // Summary
+  const uncertain = allEvents.filter(e => e.uncertain_fields && e.uncertain_fields.length > 0).length;
+  document.getElementById('summaryRow').style.cssText = 'display:flex!important';
+  document.getElementById('summaryRow').innerHTML = `
+    <div class="summary-chip"><span>${allEvents.length}</span>Events Found</div>
+    <div class="summary-chip"><span style="color:var(--warn)">${uncertain}</span>Need Review</div>
+    <div class="summary-chip"><span style="color:var(--green)">${allEvents.length - uncertain}</span>Verified</div>
+  `;
+
+  container.innerHTML = allEvents.map((e, i) => {
+    const uncertain = e.uncertain_fields || [];
+    const fields = ['venue_name','venue_address','date','start_time','ticket_price'];
+    const filled = fields.filter(f => e[f] && e[f] !== 'Unknown' && e[f] !== null).length;
+    const pct = Math.round((filled / fields.length) * 100);
+    const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--warn)' : 'var(--red)';
+
+    function fieldVal(key, label) {
+      const val = e[key];
+      const isUncertain = uncertain.includes(key);
+      const isEmpty = !val || val === 'null' || val === 'Unknown';
+      return `
+        <div class="field">
+          <div class="field-label">${label}</div>
+          <div class="field-value ${isUncertain ? 'uncertain' : isEmpty ? 'missing' : ''}">
+            ${isEmpty ? '—' : val}
+            ${isUncertain ? '<span class="uncertain-badge">?</span>' : ''}
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="event-card">
+        <div class="event-header">
+          <div class="event-name">${e.event_name || 'Unnamed Event'}</div>
+          <div class="event-type-badge">${e.type || 'Other'}</div>
+        </div>
+        ${e.artist_or_performer ? `<div style="color:var(--accent);font-size:13px;margin-bottom:10px;font-family:'Space Mono',monospace;">🎤 ${e.artist_or_performer}</div>` : ''}
+        <div class="event-fields">
+          ${fieldVal('venue_name','Venue')}
+          ${fieldVal('date','Date')}
+          ${fieldVal('start_time','Show Time')}
+          ${fieldVal('ticket_price','Price')}
+          ${fieldVal('venue_address','Address')}
+          ${fieldVal('end_time','End Time')}
+        </div>
+        ${e.event_url ? `<div class="event-url">🔗 <a href="${e.event_url}" target="_blank">${e.event_url}</a></div>` : ''}
+        <div class="completeness-bar">
+          <div class="completeness-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function switchTabByName(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['scrape','refine','results'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(allEvents, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'ripple-events.json'; a.click();
+}
+
+function exportCSV() {
+  const keys = ['event_name','artist_or_performer','venue_name','venue_address','date','start_time','end_time','ticket_price','event_url','type'];
+  const header = keys.join(',');
+  const rows = allEvents.map(e => keys.map(k => `"${(e[k]||'').toString().replace(/"/g,'""')}"`).join(','));
+  const blob = new Blob([[header,...rows].join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'ripple-events.csv'; a.click();
+}
+
+function clearResults() {
+  allEvents = [];
+  renderResults();
+  document.getElementById('summaryRow').style.cssText = 'display:none!important';
+}
+</script>
+
+</body>
+</html>
